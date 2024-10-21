@@ -27,7 +27,7 @@ def run(playwright: Playwright, card_type: str) -> None:
         return
 
     browser = playwright.chromium.launch(headless=False)
-    context = browser.new_context()
+    context = browser.new_context(locale="ko-KR")
     page = context.new_page()
 
     # 페이지 이동
@@ -125,12 +125,20 @@ def run(playwright: Playwright, card_type: str) -> None:
     # 버튼 클릭 (id로 접근)
     page.click("#btn_pym02Layer")
 
-    time.sleep(20)
+    # 성공 여부 확인
+    try:
+        # 결제 성공 메시지 또는 요소를 기다림
+        page.wait_for_selector("text=결제가 완료되었습니다.", timeout=10000)  # 결제 완료 메시지 대기
+        print(f"{card_type} 카드 결제 성공")
+    except Exception:
+        print(f"{card_type} 카드 결제 실패")
+
+    time.sleep(5)
 
     # ---------------------
     context.close()
     browser.close()
 
 with sync_playwright() as playwright:
-    # run(playwright, card_type="THEMOA")  # 카드 종류에 따라 THEMOA 또는 JJABMOA 전달
+    run(playwright, card_type="THEMOA")  # 카드 종류에 따라 THEMOA 또는 JJABMOA 전달
     run(playwright, card_type="JJABMOA")  # 카드 종류에 따라 THEMOA 또는 JJABMOA 전달
