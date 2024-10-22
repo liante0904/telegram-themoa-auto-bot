@@ -7,8 +7,8 @@ from playwright.sync_api import sync_playwright
 # .env 파일 로드
 load_dotenv()
 
-kakao_email=os.getenv("KAKAO_EMAIL")
-kakao_password=os.getenv("KAKAO_PASSWORD")
+kakao_email = os.getenv("KAKAO_EMAIL")
+kakao_password = os.getenv("KAKAO_PASSWORD")
 
 def get_card_info(card_type):
     # 카드 종류에 따른 환경 변수 설정
@@ -38,11 +38,11 @@ def get_card_info(card_type):
         print("Invalid card type")
         return None
 
-def run(context, card_type) -> None:
+def run(context, card_type) -> bool:
     card_info = get_card_info(card_type)
 
     if card_info is None:
-        return  # 카드 정보가 잘못된 경우 종료
+        return False  # 카드 정보가 잘못된 경우 종료
 
     page = context.new_page()
     page.goto("https://www.skylife.co.kr/member/login#enp_mbris")
@@ -71,7 +71,7 @@ def run(context, card_type) -> None:
             # 페이지가 완전히 로드될 때까지 대기
             page.wait_for_load_state('networkidle')
             print("Redirected to Main page. Proceeding to payment...")
-            return  # 리다이렉션된 경우 로그인 완료로 처리
+            return True  # 리다이렉션된 경우 로그인 완료로 처리
     
     except Exception:
         # 팝업이 닫히지 않았으므로 로그인 절차 필요
@@ -113,7 +113,6 @@ def run(context, card_type) -> None:
     amt = card_info['amt']
     password_prefix = card_info['password_prefix']
 
-
     card_parts = []
     # 카드번호 입력 (형식 체크)
     if '-' in card_number:
@@ -123,14 +122,14 @@ def run(context, card_type) -> None:
             card_parts = card_parts  # 카드 번호 각 부분을 담음
         else:
             print("카드 번호 형식이 잘못되었습니다.")
-            return
+            return False
     else:
         # 1111222233334444 형식
         if len(card_number) == 16 and card_number.isdigit():
             card_parts = [card_number[i:i+4] for i in range(0, 16, 4)]  # 카드 번호 각 부분을 담음
         else:
             print("카드 번호 형식이 잘못되었습니다.")
-            return
+            return False
 
     page.get_by_role("textbox", name="카드번호 첫 번째 4자리").click()
     page.get_by_role("textbox", name="카드번호 첫 번째 4자리").fill(card_parts[0])
@@ -181,7 +180,12 @@ def run(context, card_type) -> None:
     # 결제 버튼 클릭
     page.locator("a").filter(has_text=re.compile(r"^결제하기$")).click()
     time.sleep(1)
+
+    # 성공 여부를 반환
+    success = handle_dialog(page.wait_for_event("dialog"))
     context.close()
+    
+    return success
 
 def handle_dialog(dialog):
     # 대화 상자 메시지 출력
@@ -189,13 +193,14 @@ def handle_dialog(dialog):
     print("Dialog message:", message)
     
     # 성공과 실패 판별
-    if "성공" in message:  # 성공 조건에 맞는 메시지
+    if "정상 결제되었습니다" in message:  # 성공 조건에 맞는 메시지
         print("Payment was successful!")
-    elif "실패" in message:  # 실패 조건에 맞는 메시지
+        dialog.dismiss()
+        return True
+    else:
         print("Payment failed.")
-    
-    # 대화 상자 닫기
-    dialog.dismiss()
+        dialog.dismiss()
+        return False
 
 def main():
     try:
@@ -210,10 +215,14 @@ def main():
                 print("Loading existing session state...")
                 context.storage_state(path="storage_state.json")
             
-            run(context, card_type="THEMOA")
-            run(context, card_type="JJABMOA")
-            # for card_type in ["THEMOA", "JJABMOA"]:
-            #     run(context, card_type)
+            card_types = ["THEMOA", "JJABMOA"]
+            for card_type in card_types:
+                success = run(context, card_type)
+                if success:
+                    print(f"Payment for {card_type} was successful. Proceeding to next card...")
+                else:
+                    print(f"Payment for {card_type} failed. Stopping process.")
+                    break
 
     except Exception as e:
         print(f"An error occurred: {e}")
