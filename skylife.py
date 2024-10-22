@@ -179,12 +179,11 @@ def run(context, card_type) -> bool:
 
     # 결제 버튼 클릭
     page.locator("a").filter(has_text=re.compile(r"^결제하기$")).click()
-    time.sleep(1)
-
-    # 성공 여부를 반환
-    success = handle_dialog(page.wait_for_event("dialog"))
-    context.close()
     
+    # 다이얼로그 발생 대기 및 처리
+    success = page.wait_for_event("dialog")
+
+    context.close()
     return success
 
 def handle_dialog(dialog):
@@ -195,13 +194,13 @@ def handle_dialog(dialog):
     # 성공과 실패 판별
     if "정상 결제되었습니다" in message:  # 성공 조건에 맞는 메시지
         print("Payment was successful!")
-        dialog.dismiss()
+        dialog.dismiss()  # 다이얼로그 닫기
         return True
     else:
         print("Payment failed.")
-        dialog.dismiss()
+        dialog.dismiss()  # 다이얼로그 닫기
         return False
-
+    
 def main():
     try:
         with sync_playwright() as playwright:
@@ -215,7 +214,8 @@ def main():
                 print("Loading existing session state...")
                 context.storage_state(path="storage_state.json")
             
-            card_types = ["THEMOA", "JJABMOA"]
+            # card_types = ["THEMOA", "JJABMOA"]
+            card_types = ["JJABMOA"]
             for card_type in card_types:
                 success = run(context, card_type)
                 if success:
