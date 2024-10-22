@@ -100,7 +100,7 @@ def run(playwright: Playwright, card_type: str) -> None:
 
     # 유효기간 입력
     page.get_by_role("textbox", name="유효기간").click()
-    page.get_by_role("textbox", name="유효기간").type(f"{expiry_month}{expiry_year}", delay=200)
+    page.get_by_role("textbox", name="유효기간").type(f"{expiry_month}{expiry_year[-2:]}", delay=200)
     time.sleep(1)
 
     # 카드 소유자 이름 입력
@@ -122,23 +122,30 @@ def run(playwright: Playwright, card_type: str) -> None:
     # 확인 버튼 클릭
     page.get_by_role("button", name="확인").click()
 
-    # 버튼 클릭 (id로 접근)
+    # 카드 결제 버튼 클릭 (id로 접근)
     page.click("#btn_pym02Layer")
 
     # 성공 여부 확인
     try:
-        # 결제 성공 메시지 또는 요소를 기다림
-        page.wait_for_selector("text=결제가 완료되었습니다.", timeout=10000)  # 결제 완료 메시지 대기
-        print(f"{card_type} 카드 결제 성공")
+        # "즉시 납부하시겠습니까?" 이후 텍스트 변경을 기다림
+        page.wait_for_function(
+            'document.evaluate(\'//*[@id="pym02Layer"]/div/div[1]/p\', document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue.innerText !== "즉시 납부하시겠습니까?"',
+            timeout=20000  # 타임아웃 시간 증가 (필요에 따라 조정)
+        )
+        
+        # 텍스트 변경 후 새로운 메시지 가져오기
+        new_message = page.locator('xpath=//*[@id="pym02Layer"]/div/div[1]/p').inner_text()
+        print(f"변경된 메시지: {new_message}")
     except Exception:
         print(f"{card_type} 카드 결제 실패")
 
-    time.sleep(5)
+    time.sleep(5000000)
 
     # ---------------------
     context.close()
     browser.close()
 
 with sync_playwright() as playwright:
-    run(playwright, card_type="THEMOA")  # 카드 종류에 따라 THEMOA 또는 JJABMOA 전달
+    # run(playwright, card_type="THEMOA")  # 카드 종류에 따라 THEMOA 또는 JJABMOA 전달
     run(playwright, card_type="JJABMOA")  # 카드 종류에 따라 THEMOA 또는 JJABMOA 전달
+    
