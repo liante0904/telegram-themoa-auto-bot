@@ -88,7 +88,11 @@ def run(context, card_type) -> bool:
         page1.get_by_role("button", name="로그인", exact=True).click()
         
         # 2단계 인증 비활성화
-        page1.get_by_text("이 브라우저에서 2단계 인증 사용 안 함").click()
+        button_locator = page1.get_by_text("이 브라우저에서 2단계 인증 사용 안 함")
+        if button_locator.is_visible():
+            button_locator.click()
+        else:
+            print("2단계 인증 버튼이 보이지 않습니다. 넘어갑니다.")
         page1.get_by_role("button", name="계속하기").click()
 
         print("Waiting for popup to close after login process...")
@@ -215,7 +219,8 @@ def main():
                 context.storage_state(path="storage_state.json")
             
             # card_types = ["THEMOA", "JJABMOA"]
-            card_types = ["JJABMOA"]
+            # card_types = ["JJABMOA"]
+            card_types = ["THEMOA"]
             for card_type in card_types:
                 success = run(context, card_type)
                 if success:
