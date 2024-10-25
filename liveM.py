@@ -55,12 +55,6 @@ def run(playwright: Playwright, card_type: str) -> None:
     page.get_by_role("link", name="부분 납부").click()
     time.sleep(1)
 
-    # 확인 버튼 클릭 (두 번)
-    page.get_by_role("button", name="확인").click()
-    time.sleep(1)
-    page.get_by_role("button", name="확인").click()
-    time.sleep(1)
-
     # 부분 납부금액 입력
     page.get_by_label("부분 납부금액").click()
     page.get_by_label("부분 납부금액").fill(amount)
@@ -127,17 +121,20 @@ def run(playwright: Playwright, card_type: str) -> None:
 
     # 성공 여부 확인
     try:
-        # "즉시 납부하시겠습니까?" 이후 텍스트 변경을 기다림
-        page.wait_for_function(
-            'document.evaluate(\'//*[@id="pym02Layer"]/div/div[1]/p\', document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue.innerText !== "즉시 납부하시겠습니까?"',
-            timeout=20000  # 타임아웃 시간 증가 (필요에 따라 조정)
-        )
-        
-        # 텍스트 변경 후 새로운 메시지 가져오기
-        new_message = page.locator('xpath=//*[@id="pym02Layer"]/div/div[1]/p').inner_text()
-        print(f"변경된 메시지: {new_message}")
-    except Exception:
-        print(f"{card_type} 카드 결제 실패")
+        # 로딩 완료될 때까지 기다림
+        page.wait_for_selector('#message', state='visible', timeout=20000)
+
+        # 메시지 읽어오기
+        message_text = page.locator('#message').inner_text()
+
+        # 성공 여부 확인
+        if "등록된 카드로 청구 금액이 납부 처리되었습니다." in message_text:
+            print(f"{card_type} 카드 결제 성공: {message_text}")
+        else:
+            print(f"{card_type} 카드 결제 실패: {message_text}")
+
+    except Exception as e:
+        print(f"{card_type} 카드 결제 중 오류 발생: {str(e)}")
 
     time.sleep(5000000)
 
@@ -146,6 +143,6 @@ def run(playwright: Playwright, card_type: str) -> None:
     browser.close()
 
 with sync_playwright() as playwright:
-    # run(playwright, card_type="THEMOA")  # 카드 종류에 따라 THEMOA 또는 JJABMOA 전달
-    run(playwright, card_type="JJABMOA")  # 카드 종류에 따라 THEMOA 또는 JJABMOA 전달
+    run(playwright, card_type="THEMOA")  # 카드 종류에 따라 THEMOA 또는 JJABMOA 전달
+    # run(playwright, card_type="JJABMOA")  # 카드 종류에 따라 THEMOA 또는 JJABMOA 전달
     
