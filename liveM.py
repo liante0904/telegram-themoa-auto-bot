@@ -125,8 +125,10 @@ def run(playwright: Playwright, card_type: str) -> None:
         page.wait_for_selector('#message', state='visible', timeout=20000)
 
         # 메시지 읽어오기
-        message_text = page.locator('#message').inner_text()
+        message_text_element = page.locator("/html/body/div[4]/section/div/div[5]/div[13]/div/div[1]/p")
 
+        message_text = message_text_element.inner_text()
+        
         # 성공 여부 확인
         if "등록된 카드로 청구 금액이 납부 처리되었습니다." in message_text:
             print(f"{card_type} 카드 결제 성공: {message_text}")
