@@ -116,13 +116,13 @@ def run(playwright: Playwright, card_type: str) -> None:
     # 확인 버튼 클릭
     page.get_by_role("button", name="확인").click()
 
-    # 카드 결제 버튼 클릭 (id로 접근)
+    # # 카드 결제 버튼 클릭 (id로 접근)
     page.click("#btn_pym02Layer")
 
     # 성공 여부 확인
     try:
-        # 로딩 완료될 때까지 기다림
-        page.wait_for_selector('#message', state='visible', timeout=20000)
+        # 메시지 요소가 나타날 때까지 기다림
+        page.wait_for_selector("/html/body/div[4]/section/div/div[5]/div[13]/div/div[1]/p", state='visible', timeout=20000)
 
         # 메시지 읽어오기
         message_text_element = page.locator("/html/body/div[4]/section/div/div[5]/div[13]/div/div[1]/p")
